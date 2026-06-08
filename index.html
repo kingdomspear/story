@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘의 불필요한 생각</title>
+    <style>
+        /* 1. 디자인 가이드: 컬러 및 타이포그래피 */
+        :root {
+            --bg-1: #090915;
+            --bg-2: #17112f;
+            --bg-3: #2b1458;
+            --text: #f6f0ff;
+            --muted: rgba(246, 240, 255, 0.62);
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --line: rgba(255, 255, 255, 0.18);
+            --accent: #c7a6ff;
+            --font-main: system-ui, -apple-system, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+        }
+
+        /* 2. 전역 스타일 및 초기화 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-1);
+            color: var(--text);
+            overflow: hidden; /* 파티클과 캔버스 스크롤 방지 */
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 3. 배경 애니메이션 및 노이즈 효과 */
+        .background {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(120deg, var(--bg-1), var(--bg-2), var(--bg-3), var(--bg-1));
+            background-size: 300% 300%;
+            animation: gradientBG 20s ease infinite;
+            z-index: -3;
+        }
+
+        .noise {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-image: radial-gradient(var(--glass-border) 1px, transparent 1px);
+            background-size: 6px 6px;
+            opacity: 0.3;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 커서 주변 빛 번짐 효과 */
+        #glow {
+            position: fixed;
+            top: 0; left: 0;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(199, 166, 255, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+
+        /* 4. 레이아웃 및 카드 스타일 */
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .quote-card {
+            max-width: 980px;
+            width: 100%;
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 4rem 2rem;
+            text-align: center;
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .eyebrow {
+            font-size: 0.9rem;
+            color: var(--accent);
+            letter-spacing: 0.1em;
+            margin-bottom: 1.5rem;
+            opacity: 0.8;
+        }
+
+        .quote {
+            font-size: clamp(1.8rem, 5vw, 3.5rem);
+            font-weight: 300;
+            letter-spacing: -0.04em;
+            line-height: 1.4;
+            margin-bottom: 2rem;
+            word-break: keep-all;
+            /* 텍스트 전환 애니메이션용 */
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .quote.fade {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .meta {
+            font-size: 0.85rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        /* 5. 버튼 및 인터랙션 요소 */
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 3rem;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--line);
+            color: var(--text);
+            padding: 12px 24px;
+            border-radius: 99px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        button:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        .app-footer {
+            margin-top: 3rem;
+            font-size: 0.8rem;
+            color: var(--muted);
+            letter-spacing: 0.05em;
+        }
+
+        /* 파티클 캔버스 */
+        #particleCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* 6. 접근성 고려: 애니메이션 축소 */
+        @media (prefers-reduced-motion: reduce) {
+            .background { animation: none; background-position: 50% 50%; }
+            .quote { transition: none; }
+            * { transform: none !important; transition-duration: 0.01ms !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="noise"></div>
+    <div id="glow"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <main class="app">
+        <section class="quote-card">
+            <p class="eyebrow">오늘의 불필요한 생각</p>
+            <h1 class="quote" id="quoteText">로딩 중...</h1>
+            <div class="meta">
+                <p id="metaDate">2026.00.00 / thought no. 000</p>
+                <p id="metaTemp">감정 온도: --℃ / 체감: --</p>
+            </div>
+            <div class="actions">
+                <button id="btnRandom">다른 생각 보기</button>
+                <button id="btnCopy">복사하기</button>
+                <button id="btnShare">공유하기</button>
+            </div>
+        </section>
+        <footer class="app-footer">쓸모없지만, 이상하게 필요한 문장</footer>
+    </main>
+
+    <script>
+        // 1. 문장 데이터 배열
+        const thoughts = [
+            "문득, 저장하지 않은 파일이 더 진심 같았다.",
+            "오늘도 나는 닫지 못한 탭처럼 살아 있다.",
+            "쓸모없는 생각은 가끔 가장 오래 저장된다.",
+            "마음에도 임시 폴더가 있다면 꽤 무거울 것이다.",
+            "삭제한 줄 알았던 기억이 휴지통에서 나를 보고 있었다.",
+            "완료되지 않은 일은 이상하게 나보다 오래 산다.",
+            "나는 가끔 로딩 화면이 더 솔직하다고 생각한다.",
+            "기다림은 가장 오래 실행되는 백그라운드 작업이다.",
+            "오늘의 나는 자동 저장이 꺼진 문서 같다.",
+            "불필요한 생각도 가끔은 삶의 여백을 만든다.",
+            "정답을 찾다가 질문의 모서리만 닳았다.",
+            "아무것도 하지 않는 시간도 조용히 무언가를 컴파일한다.",
+            "어쩌면 침묵은 가장 압축률 높은 문장일지도 모른다.",
+            "실패한 계획은 이상하게도 지도처럼 보인다.",
+            "나는 오늘도 나를 업데이트하지 않고 재시작했다.",
+            "마음의 캐시는 생각보다 잘 지워지지 않는다.",
+            "가끔은 버그가 아니라 성격일 수도 있다.",
+            "할 일을 미루는 동안, 미룬 일은 나를 먼저 기억했다.",
+            "닫힌 창에도 아직 빛이 남아 있는 것 같았다.",
+            "나는 아직 전송되지 않은 문장에 가깝다.",
+            "무의미는 때때로 가장 인간적인 인터페이스다.",
+            "오늘의 감정은 네트워크 오류와 비슷했다.",
+            "인생에는 뒤로 가기 버튼이 없어서 다행인 날도 있다.",
+            "아무도 요청하지 않은 생각이 가장 먼저 응답했다.",
+            "마음은 종종 읽기 전용 파일처럼 굳어진다.",
+            "기억은 압축해도 원본보다 가벼워지지 않았다.",
+            "오늘 하루는 미리보기 이미지가 없었다.",
+            "내 안의 오래된 알림이 아직 읽지 않음으로 남아 있다.",
+            "괜찮다는 말은 가끔 가장 느린 로딩바다.",
+            "별일 없는 하루가 가장 섬세한 예외 처리였다."
+        ];
+
+        // 체감 온도 텍스트 풀
+        const feelings = ["저장 안 됨", "동기화 지연", "응답 없음", "읽기 전용", "오프라인", "재연결 중", "패킷 손실"];
+
+        // 2. DOM 요소 선택
+        const quoteText = document.getElementById('quoteText');
+        const metaDate = document.getElementById('metaDate');
+        const metaTemp = document.getElementById('metaTemp');
+        const btnRandom = document.getElementById('btnRandom');
+        const btnCopy = document.getElementById('btnCopy');
+        const btnShare = document.getElementById('btnShare');
+        const glow = document.getElementById('glow');
+
+        let currentQuote = "";
+
+        // 3. 날짜 기반 해시 및 초기화
+        function getDailyData() {
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
+            
+            // 날짜 문자열로 간단한 해시 생성
+            let hash = 0;
+            for (let i = 0; i < dateStr.length; i++) {
+                hash = dateStr.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            hash = Math.abs(hash);
+
+            const index = hash % thoughts.length;
+            const temp = (hash % 28) + 5; // 5 ~ 32도
+            const feeling = feelings[hash % feelings.length];
+
+            return { dateStr, index, temp, feeling };
+        }
+
+        function updateQuote(text, isDaily = false, dailyData = null) {
+            currentQuote = text;
+            quoteText.classList.add('fade');
+            
+            setTimeout(() => {
+                quoteText.textContent = text;
+                quoteText.classList.remove('fade');
+                
+                if (isDaily && dailyData) {
+                    const quoteNum = String(dailyData.index + 1).padStart(3, '0');
+                    metaDate.textContent = `${dailyData.dateStr} / thought no. ${quoteNum}`;
+                    metaTemp.textContent = `감정 온도: ${dailyData.temp}℃ / 체감: ${dailyData.feeling}`;
+                }
+            }, 300); // CSS transition 시간의 절반
+        }
+
+        function init() {
+            const data = getDailyData();
+            updateQuote(thoughts[data.index], true, data);
+        }
+
+        // 4. 이벤트 리스너: 버튼 인터랙션
+        const randomTexts = ["다른 생각 보기", "굳이 한 번 더", "쓸데없이 새로고침"];
+        btnRandom.addEventListener('click', () => {
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * thoughts.length);
+            } while (thoughts[randomIndex] === currentQuote);
+            
+            updateQuote(thoughts[randomIndex]);
+            btnRandom.textContent = randomTexts[Math.floor(Math.random() * randomTexts.length)];
+        });
+
+        btnCopy.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(currentQuote);
+                const originalText = btnCopy.textContent;
+                btnCopy.textContent = "복사됨 ✓";
+                btnCopy.style.borderColor = "var(--accent)";
+                setTimeout(() => {
+                    btnCopy.textContent = "복사하기";
+                    btnCopy.style.borderColor = "var(--line)";
+                }, 1500);
+            } catch (err) {
+                alert('복사하지 못했습니다.');
+            }
+        });
+
+        btnShare.addEventListener('click', async () => {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: '오늘의 불필요한 생각',
+                        text: currentQuote,
+                        url: window.location.href
+                    });
+                } catch (err) {
+                    console.log('공유 취소 또는 오류:', err);
+                }
+            } else {
+                btnCopy.click(); // 지원하지 않으면 복사로 대체
+            }
+        });
+
+        // 5. 시각 효과: 커서 글로우
+        document.addEventListener('mousemove', (e) => {
+            glow.style.transform = `translate(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%))`;
+        });
+
+        // 6. 시각 효과: 파티클 캔버스
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                // 부드럽게 퍼지는 속도
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = (Math.random() - 0.5) * 1.5 - 0.5; // 살짝 위로
+                this.radius = Math.random() * 2 + 0.5;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.02 + 0.01;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(199, 166, 255, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        function handleParticles(e) {
+            if (isReducedMotion) return; // 접근성: 애니메이션 최소화
+            const x = e.clientX || (e.touches && e.touches[0].clientX);
+            const y = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            // 파티클 생성 제한 (성능 최적화)
+            if (Math.random() > 0.4 && particles.length < 80) {
+                particles.push(new Particle(x, y));
+            }
+        }
+
+        window.addEventListener('mousemove', handleParticles);
+        window.addEventListener('touchmove', handleParticles, { passive: true });
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!isReducedMotion) {
+                for (let i = 0; i < particles.length; i++) {
+                    particles[i].update();
+                    particles[i].draw();
+                    if (particles[i].alpha <= 0) {
+                        particles.splice(i, 1);
+                        i--;
+                    }
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+
+        // 실행
+        init();
+        animateParticles();
+    </script>
+</body>
+</html>
